@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Reste à rembourser — Compteur</title>
+  <title>Reste à rembourser — Compteur avec Historique</title>
   <style>
     :root{--bg:#0f1724;--card:#0b1220;--accent:#10b981;--muted:#94a3b8;--glass:rgba(255,255,255,0.04)}
     html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
@@ -13,43 +13,67 @@
     .amount{font-size:64px;font-weight:700;line-height:1;display:flex;align-items:baseline;gap:8px}
     .euro{font-size:28px;opacity:0.95}
     .label{color:var(--muted);font-weight:500}
-    footer{font-size:13px;color:var(--muted);width:100%;text-align:center;margin-top:6px}
+    .history{margin-top:20px;width:100%;}
+    .history h2{font-size:16px;color:var(--muted);margin-bottom:6px}
+    .history table{width:100%;border-collapse:collapse}
+    .history th, .history td{padding:6px 10px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1)}
   </style>
 </head>
 <body>
   <div class="card" role="main">
     <h1>Reste à rembourser</h1>
     <div class="amount" id="display">
-      <span id="value">0</span>
+      <span id="value">0,00</span>
       <span class="euro">€</span>
     </div>
     <div class="label">Montant restant</div>
+
+    <div class="history">
+      <h2>Historique des remboursements</h2>
+      <table id="historyTable">
+        <thead>
+          <tr><th>Date</th><th>Montant remboursé</th><th>Reste à rembourser</th></tr>
+        </thead>
+        <tbody>
+          <!-- Les lignes seront ajoutées manuellement dans JSONBin -->
+        </tbody>
+      </table>
+    </div>
+
     <footer>Bisous je vous aime</footer>
   </div>
 
   <script>
-    // Version avec JSONBin.io pour partager le montant global
-    // Remplace YOUR_BIN_ID et YOUR_API_KEY par tes infos JSONBin
-    const BIN_ID = '69314c99d0ea881f4012141c';
-    const API_KEY = '$2a$10$x48NcilCm7gv7Lfi954toef9A/YfzjZTOf7rdSgktC6ZN7cXb9LN2';
+    // JSONBin configuration
+    const BIN_ID = '69314c99d0ea881f4012141c'; // Remplace par ton BIN_ID
+    const API_KEY = '$2a$10$x48NcilCm7gv7Lfi954toef9A/YfzjZTOf7rdSgktC6ZN7cXb9LN2'; // Remplace par ta clé Master Key
     const displayEl = document.getElementById('value');
+    const historyTable = document.getElementById('historyTable').querySelector('tbody');
 
-    async function fetchAmount(){
+    async function fetchData(){
       try{
         const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
           headers: { 'X-Master-Key': API_KEY }
         });
         const data = await res.json();
-        const amount = parseFloat(data.record.montant) || 0;
-        displayEl.textContent = amount.toLocaleString('fr-FR', {minimumFractionDigits:0, maximumFractionDigits:0});
+        const montant = parseFloat(data.record.montant) || 0;
+        displayEl.textContent = montant.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+        // Historique
+        const history = data.record.historique || [];
+        historyTable.innerHTML = '';
+        history.forEach(entry => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${entry.date}</td><td>${entry.montant.toLocaleString('fr-FR',{minimumFractionDigits:0, maximumFractionDigits:0})} €</td><td>${entry.reste.toLocaleString('fr-FR',{minimumFractionDigits:0, maximumFractionDigits:0})} €</td>`;
+          historyTable.appendChild(tr);
+        });
       } catch(e){
         console.error('Erreur JSONBin:', e);
         displayEl.textContent = '0';
       }
     }
 
-    fetchAmount();
+    fetchData();
   </script>
 </body>
 </html>
-
