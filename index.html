@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reste à rembourser — Compteur</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#10b981;--muted:#94a3b8;--glass:rgba(255,255,255,0.04)}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{display:grid;place-items:center;background:linear-gradient(180deg,#071022 0%,#081226 60%);color:#e6eef6}
+    .card{width:min(720px,94vw);padding:36px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));box-shadow:0 8px 32px rgba(2,6,23,0.6);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;gap:18px}
+    h1{margin:0;font-size:18px;color:var(--muted);font-weight:600}
+    .amount{font-size:64px;font-weight:700;line-height:1;display:flex;align-items:baseline;gap:8px}
+    .euro{font-size:28px;opacity:0.95}
+    .label{color:var(--muted);font-weight:500}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    button{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:8px;color:inherit;cursor:pointer;font-weight:600}
+    input[type="number"], input[type="text"]{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;width:160px;text-align:center}
+    .small{font-size:14px;color:var(--muted)}
+    .toprow{width:100%;display:flex;justify-content:space-between;align-items:center}
+    .actions{display:flex;gap:8px}
+    .danger{background:transparent;border:1px dashed rgba(255,0,0,0.12);color:#ffb4b4}
+    footer{font-size:13px;color:var(--muted);width:100%;text-align:center;margin-top:6px}
+    @media (max-width:420px){.amount{font-size:44px}.card{padding:20px}}
+  </style>
+</head>
+<body>
+  <div class="card" role="main">
+    <div class="toprow">
+      <h1>Reste à rembourser</h1>
+      <div class="small">Double-clique sur le montant pour l'éditer</div>
+    </div>
+
+    <div class="amount" tabindex="0" id="display">
+      <span id="value">0,00</span>
+      <span class="euro">€</span>
+    </div>
+    <div class="label small">Montant restant</div>
+
+    <div class="controls" aria-hidden="false">
+      <div class="actions">
+        <button data-change="-100">-100</button>
+        <button data-change="-10">-10</button>
+        <button data-change="-1">-1</button>
+        <button data-change="1">+1</button>
+        <button data-change="10">+10</button>
+        <button data-change="100">+100</button>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="manual" type="text" inputmode="numeric" placeholder="Entrer un montant (ex: 1250.50)" aria-label="Saisir un montant" />
+        <button id="set">Définir</button>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="reset" class="danger">Réinitialiser</button>
+        <button id="save">Enregistrer</button>
+      </div>
+    </div>
+
+    <footer>Les valeurs sont enregistrées dans le navigateur (localStorage).</footer>
+  </div>
+
+  <script>
+    // Simple compteur "Reste à rembourser" — sauvegarde en localStorage
+    const KEY = 'resteARembourser_v1';
+
+    function clamp(n){ return Math.max(0, n); }
+    function toNumber(v){
+      if (typeof v === 'number') return v;
+      if (!v) return 0;
+      // normalize comma / space separators
+      const cleaned = String(v).replace(/\s/g,'').replace(',','.')
+      const n = parseFloat(cleaned);
+      return isNaN(n) ? 0 : n;
+    }
+    function formatCurrency(n){
+      // format with 2 decimals, space thousands, comma decimal
+      return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+
+    const valueEl = document.getElementById('value');
+    const display = document.getElementById('display');
+    const manual = document.getElementById('manual');
+
+    let amount = load();
+    render();
+
+    function load(){
+      try{
+        const raw = localStorage.getItem(KEY);
+        return raw ? toNumber(raw) : 0;
+      }catch(e){return 0}
+    }
+    function save(){
+      try{ localStorage.setItem(KEY, String(amount)); }catch(e){}
+    }
+
+    function render(){
+      valueEl.textContent = formatCurrency(amount);
+    }
+
+    // +/- buttons
+    document.querySelectorAll('button[data-change]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const delta = toNumber(btn.getAttribute('data-change'));
+        amount = clamp(Math.round((amount + delta) * 100)/100);
+        render();
+      });
+    });
+
+    // set from input
+    document.getElementById('set').addEventListener('click', ()=>{
+      const n = toNumber(manual.value);
+      amount = clamp(Math.round(n*100)/100);
+      render();
+    });
+
+    // reset
+    document.getElementById('reset').addEventListener('click', ()=>{
+      if(confirm('Réinitialiser le montant à 0 € ?')){ amount = 0; render(); }
+    });
+
+    // save button
+    document.getElementById('save').addEventListener('click', ()=>{
+      save();
+      alert('Montant enregistré dans votre navigateur.');
+    });
+
+    // double-click edit on big amount
+    display.addEventListener('dblclick', ()=>{
+      manual.value = amount.toString();
+      manual.focus();
+      manual.select();
+    });
+
+    // keyboard shortcuts when focused on display
+    display.addEventListener('keydown', (e)=>{
+      if(e.key === '+' || e.key === '='){ amount = clamp(Math.round((amount + 1)*100)/100); render(); }
+      if(e.key === '-') { amount = clamp(Math.round((amount - 1)*100)/100); render(); }
+      if(e.key === 's' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); save(); alert('Enregistré'); }
+    });
+
+    // enter on manual input sets value
+    manual.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){
+        document.getElementById('set').click();
+      }
+    });
+
+    // autosave on unload
+    window.addEventListener('beforeunload', save);
+
+    // expose for console debugging
+    window.compteur = {
+      get amount(){return amount},
+      set amount(v){ amount = clamp(toNumber(v)); render(); },
+      save, render
+    }
+  </script>
+</body>
+</html>
+
