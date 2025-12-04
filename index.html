@@ -57,7 +57,7 @@
         });
         const data = await res.json();
         const montant = parseFloat(data.record.montant) || 0;
-        displayEl.textContent = montant.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+        displayEl.textContent = montant.toLocaleString('fr-FR', {minimumFractionDigits:0, maximumFractionDigits:0});
 
         // Historique
         const history = data.record.historique || [];
