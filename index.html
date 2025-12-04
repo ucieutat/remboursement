@@ -28,11 +28,10 @@
   <div class="card" role="main">
     <div class="toprow">
       <h1>Reste à rembourser</h1>
-      <div class="small">Double-clique sur le montant pour l'éditer</div>
     </div>
 
     <div class="amount" tabindex="0" id="display">
-      <span id="value">0,00</span>
+      <span id="value">0</span>
       <span class="euro">€</span>
     </div>
     <div class="label small">Montant restant</div>
@@ -76,7 +75,7 @@
     }
     function formatCurrency(n){
       // format with 2 decimals, space thousands, comma decimal
-      return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      return n.toLocaleString('fr-FR', {minimumFractionDigits:0, maximumFractionDigits:0});
     }
 
     const valueEl = document.getElementById('value');
